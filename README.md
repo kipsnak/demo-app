@@ -220,7 +220,8 @@ mkdir -p Database/data
 
 let's create a pod which will host the database as well as the web client
 ```bash
-podman pod create --name postgres-101 -p 9876:80 -p 5432:5432
+podman network create demo-network
+podman pod create --network=demo-network --name postgres-101 -p 9876:80 -p 5432:5432
 ```
 
 check
@@ -247,4 +248,72 @@ CONTAINER ID  IMAGE                              COMMAND     CREATED         STA
 7b849c558966  localhost/podman-pause:4.3.1-0                 5 minutes ago   Up 3 minutes ago   0.0.0.0:5432->5432/tcp, 0.0.0.0:9876->80/tcp  956602f69c6b-infra
 5361d1bf8043  docker.io/dpage/pgadmin4:latest                4 minutes ago   Up 3 minutes ago   0.0.0.0:5432->5432/tcp, 0.0.0.0:9876->80/tcp  pg-admin
 27495037d272  docker.io/library/postgres:latest  postgres    26 seconds ago  Up 22 seconds ago  0.0.0.0:5432->5432/tcp, 0.0.0.0:9876->80/tcp  pg-db
+```
+
+## Backend
+
+### Connecting backend with database locally
+
+check database network config
+```bash
+podman inspect pg-db | jq ".[0].NetworkSettings.Networks"
+{
+  "demo-network": {
+    "EndpointID": "",
+    "Gateway": "10.89.0.1",
+    "IPAddress": "10.89.0.4",
+    "IPPrefixLen": 24,
+    "IPv6Gateway": "",
+    "GlobalIPv6Address": "",
+    "GlobalIPv6PrefixLen": 0,
+    "MacAddress": "36:fe:99:9c:db:87",
+    "NetworkID": "demo-network",
+    "DriverOpts": null,
+    "IPAMConfig": null,
+    "Links": null,
+    "Aliases": [
+      "f4a6c332545e"
+    ]
+  }
+}
+```
+
+Use its IP for `SPRING_DATASOURCE_URL` env variable
+```bash
+podman run --network=demo-network -it --rm \
+    -e "SPRING_DATASOURCE_URL=jdbc:postgresql://10.89.0.4:5432/employee_management_system" \
+    -e "SPRING_DATASOURCE_USER=myapplication" \
+    -e "SPRING_DATASOURCE_PASSWORD=M3P@ssw0rd\!" -p 8080:8080 demo-backend:latest /bin/sh
+```
+
+check
+```
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.0.4)
+
+2024-11-01T05:01:11.203Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : Starting SpringbootBackendApplication v0.0.1-SNAPSHOT using Java 17-ea with PID 1 (/app/runme.jar started by root in /)
+2024-11-01T05:01:11.206Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : No active profile set, falling back to 1 default profile: "default"
+2024-11-01T05:01:11.770Z  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-11-01T05:01:11.822Z  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 43 ms. Found 1 JPA repository interfaces.
+2024-11-01T05:01:12.278Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+2024-11-01T05:01:12.285Z  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2024-11-01T05:01:12.285Z  INFO 1 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.5]
+2024-11-01T05:01:12.341Z  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2024-11-01T05:01:12.343Z  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1087 ms
+2024-11-01T05:01:12.480Z  INFO 1 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-11-01T05:01:12.525Z  INFO 1 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.1.7.Final
+2024-11-01T05:01:12.728Z  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2024-11-01T05:01:12.886Z  INFO 1 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@aec50a1
+2024-11-01T05:01:12.888Z  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2024-11-01T05:01:12.922Z  INFO 1 --- [           main] SQL dialect                              : HHH000400: Using dialect: org.hibernate.dialect.PostgreSQLDialect
+2024-11-01T05:01:13.524Z  INFO 1 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
+2024-11-01T05:01:13.532Z  INFO 1 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-11-01T05:01:13.714Z  WARN 1 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-11-01T05:01:13.991Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2024-11-01T05:01:13.999Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : Started SpringbootBackendApplication in 3.108 seconds (process running for 3.465)
 ```
