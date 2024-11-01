@@ -1,0 +1,42 @@
+#!/bin/bash
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -i|--image)
+      IMAGE=$2
+      shift
+      shift
+      ;;
+    -f|--ignition)
+      IGN_CONFIG=$2
+      shift
+      shift
+      ;;
+    -n|--node)
+      NODE_NAME=node-$2
+      shift
+      shift
+      ;;
+    -*|--*)
+      echo "Unknown option"
+      shift
+      ;;
+  esac
+done
+
+if [ -z ${IMAGE} ]; then echo "Missing option: use -i | --image to specify coreos image location"; exit 1; fi
+if [ -z ${IGN_CONFIG} ]; then echo "Missing option: use -f | --ignition to specify ignition file location"; exit 1; fi
+if [ -z ${NODE_NAME} ]; then echo "Missing option: use -n | --node to specify node number"; exit 1; fi
+
+VCPUS=2
+RAM_MB=4096
+DISK_GB=10
+STREAM=stable
+
+echo "Creating a VM for Node 1 as ${NODE_NAME} ..."
+
+virt-install --connect="qemu:///system" --name="${NODE_NAME}" \
+    --vcpus="${VCPUS}" --memory="${RAM_MB}" \
+    --os-variant="fedora-coreos-$STREAM" --import --graphics=none \
+    --disk="size=${DISK_GB},backing_store=${IMAGE}" \
+    --qemu-commandline="-fw_cfg name=opt/com.coreos/config,file=${IGN_CONFIG}"
