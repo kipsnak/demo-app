@@ -1,0 +1,92 @@
+---
+#
+# constants
+#
+namesapce: &namespace demo-app-ns
+
+#
+# Create a namespace
+#
+
+namespace:
+  name: *namespace
+  create: false
+
+#
+# List of applications to deploy to cluster
+#
+applications:
+
+#
+# BACKEND
+#
+
+- application: backend
+  labels:
+    app: app-backend
+
+  serviceAccount:
+    create: true
+
+  name: app-backend
+  namespace: *namespace
+
+  deploy:
+    replicas: 1
+    containers:
+    - name: app-backend
+      imagePullPolicy: IfNotPresent
+      repository: docker.io/kipsnak
+      image: demo-backend
+      tag: latest
+      env:
+        SPRING_POSTGRES_USERNAME: "myapplication" 
+        SPRING_POSTGRES_PASSWORD: "M3P@ssw0rd!"
+        SPRING_POSTGRES_URL: "tobeadded"
+      ports:
+      - name: be-http
+        containerPort: 8080
+  service:
+    type: ClusterIP  # just pick an IP from internal IP pool since ingress
+    labels:
+      app: app-backend
+    ports:
+      - name: be-port
+        port: 8080
+        targetPort: be-http      
+
+#
+# FRONTEND
+#
+
+#### Disabled while debuging frontend ####
+#- application: frontend
+#  labels:
+#    app: app-frontend
+#
+#  serviceAccount:
+#    create: true
+#
+#  name: app-backend
+#  namespace: *namespace
+#
+#  deploy:
+#    replicas: 1
+#    containers:
+#    - name: app-frontend
+#      imagePullPolicy: IfNotPresent
+#      repository: my-registry.io/my-application
+#      image: front
+#      tag: "1.0"
+#      ports:
+#      - name: fe-http
+#        containerPort: 80
+#        
+#  service:
+#    type: ClusterIP  # just pick an IP from internal IP pool since ingress
+#    labels:
+#      app: app-backend
+#    ports:
+#      - name: fe-port
+#        port: 80
+#        targetPort: fe-http

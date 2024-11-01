@@ -1,0 +1,26 @@
+{{- range .Values.applications -}}
+{{/* Starting new context for applications list */}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-svc" .name | quote }}
+  namespace: {{ .namespace | quote }}
+  labels:
+    {{- include "myapp.labels" $ | nindent 4 }}
+    {{- .labels | toYaml | nindent 4 }}
+spec:
+  type: {{ .service.type }}
+  ports:
+    {{- range .service.ports -}}
+    {{/* Starting new context for applications list */}}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: TCP
+    {{/* end of applications loop */}}
+    {{- end }}
+  selector:
+    {{- include "myapp.selectorLabels" $ | nindent 4 }}
+    {{- .labels | toYaml | nindent 4 }}
+{{/* end of applications loop */}}
+{{- end }}

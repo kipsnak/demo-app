@@ -1,0 +1,47 @@
+{{- range .Values.applications -}}
+{{/* Starting new context for applications list */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "myapp.labels" $ | nindent 4 }}
+    {{- .labels | toYaml | nindent 4 }}
+  name: {{ printf "%s-deploy" .name | quote }}
+  namespace: {{ .namespace | quote }}
+spec:
+  replicas: {{ .deploy.replicas }}
+  selector:
+    matchLabels:
+      {{- include "myapp.selectorLabels" $ | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "myapp.labels" $ | nindent 8 }}
+    spec:
+      serviceAccountName: {{ printf "%s-sa" .name | default "default-sa" }}
+      containers:
+        {{- range .deploy.containers }}
+        {{/* Starting new context for containers list */}}
+        - name: {{ .name }}
+          image: "{{ .repository }}/{{ .image }}:{{ .tag }}"
+          imagePullPolicy: {{ .pullPolicy }}
+          {{- if .env }}
+          env:
+            {{- range $key, $value := .env }}
+            - name: {{ $key }}
+              value: {{ $value }}
+            {{- end }}
+          {{- end }}
+          ports:
+            {{- range .ports -}}
+            {{/* Starting new context for ports list */}}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: TCP
+            {{/* end of ports loop */}}
+            {{- end }}
+          {{/* /!\ do I need to add any volumes ?? for now let's keep it as simple as possible */}}
+      {{/* end of containers loop */}}
+      {{- end }}
+{{/* end of applications loop */}}
+{{- end }}
