@@ -252,6 +252,14 @@ CONTAINER ID  IMAGE                              COMMAND     CREATED         STA
 
 ## Backend
 
+### Build image
+
+Using multi-stage to reduce built image size.
+```bash
+cd <project root dir>/Backend
+podman build -t demo-backend:latest .
+```
+
 ### Connecting backend with database locally
 
 check database network config
