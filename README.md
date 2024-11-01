@@ -388,3 +388,14 @@ replicaset.apps/app-backend-deploy-79f76b6db5   1         1         0       13s
 
 > [!warning]  
 > App shutdown with error; I need to fix network access to database from kubernetes cluster
+
+
+# TODO:
+
+* Fix frontend and make it compile
+* push frontend image to registry
+* fix network access to database (from k8s cluster -> local podman network)
+* activate frontend Helm values
+* finish writing the readme
+* automate cluster install completely
+* write CI/CD ?
