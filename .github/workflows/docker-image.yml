@@ -1,18 +1,18 @@
-name: Docker build
+name: Build the backend Docker image
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build ./Backend/ --file Dockerfile --tag kipsnak/demo-backend:latest
+    - name: Chekout the repo
+      uses: actions/checkout@v4
+    - name: Build without push the backend Docker image
+      uses: docker/build-push-action@v6
+      with:
+        push: false
+        context: "{{defaultContext}}:Backend"
+        tags: kipsnak/demo-backend:latest
