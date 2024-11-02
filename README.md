@@ -1,5 +1,7 @@
 # Notes
 
+![example workflow](https://github.com/kipsnak/demo-app/actions/workflows/docker-image.yml/badge.svg)
+
 ## Disclaimer
 
 The current projet is a simple challenge task done to only demonstrate one of many way to deploy aplications on kubenetes infrastructure. This challenge aims to show how could a DevOps team provide a complete and ready to use to environment for your application. The project has no mean to be used in any "real world" environment.
