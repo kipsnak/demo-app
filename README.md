@@ -364,6 +364,8 @@ CONTAINER ID  IMAGE                              COMMAND     CREATED         STA
 27495037d272  docker.io/library/postgres:latest  postgres    26 seconds ago  Up 22 seconds ago  0.0.0.0:5432->5432/tcp, 0.0.0.0:9876->80/tcp  pg-db
 ```
 
+From pgadmin, create database named `employees`
+
 ## Backend
 
 ### Build image
@@ -383,7 +385,7 @@ podman inspect pg-db | jq ".[0].NetworkSettings.Networks"
   "demo-network": {
     "EndpointID": "",
     "Gateway": "10.89.0.1",
-    "IPAddress": "10.89.0.4",
+    "IPAddress": "10.89.0.2",
     "IPPrefixLen": 24,
     "IPv6Gateway": "",
     "GlobalIPv6Address": "",
@@ -403,7 +405,7 @@ podman inspect pg-db | jq ".[0].NetworkSettings.Networks"
 Use its IP for `SPRING_DATASOURCE_URL` env variable
 ```bash
 podman run --network=demo-network -it --rm \
-    -e "SPRING_DATASOURCE_URL=jdbc:postgresql://10.89.0.4:5432/employee_management_system" \
+    -e "SPRING_DATASOURCE_URL=jdbc:postgresql://10.89.0.2:5432/employees" \
     -e "SPRING_DATASOURCE_USER=myapplication" \
     -e "SPRING_DATASOURCE_PASSWORD=M3P@ssw0rd\!" -p 8080:8080 demo-backend:latest /bin/sh
 ```
@@ -563,75 +565,64 @@ check
 kubectl -n demo-app-ns get all
 ```
 ```
-NAME                                       READY   STATUS    RESTARTS     AGE
-pod/app-backend-deploy-79f76b6db5-xb8md    1/1     Running   1 (4s ago)   3m47s
-pod/app-frontend-deploy-7ccd9849df-g7h5n   1/1     Running   0            3m47s
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/app-backend-deploy-75db86bc69-tptc9    1/1     Running   0          43s
+pod/app-frontend-deploy-7ccd9849df-p87ld   1/1     Running   0          43s
 
-NAME                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
-service/app-backend-svc    ClusterIP   10.101.42.34     <none>        8080/TCP   3m48s
-service/app-frontend-svc   ClusterIP   10.106.214.130   <none>        80/TCP     3m48s
+NAME                       TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/app-backend-svc    ClusterIP   10.100.33.156   <none>        8080/TCP   43s
+service/app-frontend-svc   ClusterIP   10.102.97.78    <none>        80/TCP     43s
 
 NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/app-backend-deploy    1/1     1            1           3m48s
-deployment.apps/app-frontend-deploy   1/1     1            1           3m48s
+deployment.apps/app-backend-deploy    1/1     1            1           43s
+deployment.apps/app-frontend-deploy   1/1     1            1           43s
 
 NAME                                             DESIRED   CURRENT   READY   AGE
-replicaset.apps/app-backend-deploy-79f76b6db5    1         1         1       3m48s
-replicaset.apps/app-frontend-deploy-7ccd9849df   1         1         1       3m48s
+replicaset.apps/app-backend-deploy-75db86bc69    1         1         1       43s
+replicaset.apps/app-frontend-deploy-7ccd9849df   1         1         1       43s
 ```
 
-> [!warning]  
-> I need to fix network access to database from kubernetes cluster
-
+check
 ```bash
-kubectl logs -n demo-app-ns pods/app-backend-deploy-79f76b6db5-xb8md --tail 30
+kubectl logs -n demo-app-ns pods/app-backend-deploy-75db86bc69-tptc9
 ```
+
 ```
-at org.springframework.boot.loader.MainMethodRunner.run(MainMethodRunner.java:49) ~[runme.jar:0.0.1-SNAPSHOT]
-        at org.springframework.boot.loader.Launcher.launch(Launcher.java:95) ~[runme.jar:0.0.1-SNAPSHOT]
-        at org.springframework.boot.loader.Launcher.launch(Launcher.java:58) ~[runme.jar:0.0.1-SNAPSHOT]
-        at org.springframework.boot.loader.JarLauncher.main(JarLauncher.java:65) ~[runme.jar:0.0.1-SNAPSHOT]
-Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception with message: URL must start with 'jdbc'
-        at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:657) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:645) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1324) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1161) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:561) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:521) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:326) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:324) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1405) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1325) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:885) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:789) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        ... 29 common frames omitted
-Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception with message: URL must start with 'jdbc'
-        at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:171) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        ... 43 common frames omitted
-Caused by: java.lang.IllegalArgumentException: URL must start with 'jdbc'
-        at org.springframework.util.Assert.isTrue(Assert.java:122) ~[spring-core-6.0.6.jar!/:6.0.6]
-        at org.springframework.boot.jdbc.DatabaseDriver.fromJdbcUrl(DatabaseDriver.java:282) ~[spring-boot-3.0.4.jar!/:3.0.4]
-        at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:180) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
-        at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.initializeDataSourceBuilder(DataSourceProperties.java:125) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
-        at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:48) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
-        at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:90) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
-        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:na]
-        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:78) ~[na:na]
-        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:na]
-        at java.base/java.lang.reflect.Method.invoke(Method.java:568) ~[na:na]
-        at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:139) ~[spring-beans-6.0.6.jar!/:6.0.6]
-        ... 44 common frames omitted
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.0.4)
+2024-11-04T21:44:55.973Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : Starting SpringbootBackendApplication v0.0.1-SNAPSHOT using Java 17-ea with PID 1 (/app/runme.jar started by root in /)
+2024-11-04T21:44:55.977Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : No active profile set, falling back to 1 default profile: "default"
+2024-11-04T21:44:56.605Z  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-11-04T21:44:56.655Z  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 42 ms. Found 1 JPA repository interfaces.
+2024-11-04T21:44:57.169Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+2024-11-04T21:44:57.179Z  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2024-11-04T21:44:57.180Z  INFO 1 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.5]
+2024-11-04T21:44:57.264Z  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2024-11-04T21:44:57.266Z  INFO 1 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1227 ms
+2024-11-04T21:44:57.597Z  INFO 1 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-11-04T21:44:57.644Z  INFO 1 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.1.7.Final
+2024-11-04T21:44:57.928Z  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2024-11-04T21:44:58.111Z  INFO 1 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@415e0bcb
+2024-11-04T21:44:58.113Z  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2024-11-04T21:44:58.162Z  INFO 1 --- [           main] SQL dialect                              : HHH000400: Using dialect: org.hibernate.dialect.PostgreSQLDialect
+2024-11-04T21:44:58.993Z  INFO 1 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
+2024-11-04T21:44:59.001Z  INFO 1 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-11-04T21:44:59.253Z  WARN 1 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-11-04T21:44:59.573Z  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2024-11-04T21:44:59.582Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : Started SpringbootBackendApplication in 4.1 seconds (process running for 4.597)
 ```
+
+
 
 
 # TODO:
 
-
-* fix network access to database (from k8s cluster -> local podman network)
+* add ingress nginx
 * finish writing the readme
 * automate cluster install completely
 * write CI/CD ?

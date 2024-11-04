@@ -11,6 +11,20 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   name: demo-app-ns
 ---
+# Source: demo-app/templates/egress.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-to-podman
+spec:
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.88.0.2/32
+    ports:
+    - protocol: TCP
+      port: 5432
+---
 # Source: demo-app/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -126,11 +140,11 @@ spec:
           image: "docker.io/kipsnak/demo-backend:latest"
           imagePullPolicy: 
           env:
-            - name: SPRING_POSTGRES_PASSWORD
+            - name: SPRING_DATASOURCE_PASSWORD
               value: M3P@ssw0rd!
-            - name: SPRING_POSTGRES_URL
-              value: tobeadded
-            - name: SPRING_POSTGRES_USERNAME
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://10.88.0.2:5432/employees?useSSL=false
+            - name: SPRING_DATASOURCE_USERNAME
               value: myapplication
           ports:
             - name: be-http

@@ -13,6 +13,15 @@ namespace:
   create: true
 
 #
+# Create an egress to be able to connect to external podman database
+#
+egress:
+  name: allow-egress-to-podman
+  cidr: 10.88.0.2/32
+  ports:
+  - 5432
+
+#
 # List of applications to deploy to cluster
 #
 applications:
@@ -42,9 +51,9 @@ applications:
       image: demo-backend
       tag: latest
       env:
-        SPRING_POSTGRES_USERNAME: "myapplication" 
-        SPRING_POSTGRES_PASSWORD: "M3P@ssw0rd!"
-        SPRING_POSTGRES_URL: "tobeadded"
+        SPRING_DATASOURCE_USERNAME: "myapplication" 
+        SPRING_DATASOURCE_PASSWORD: "M3P@ssw0rd!"
+        SPRING_DATASOURCE_URL: "jdbc:postgresql://10.88.0.2:5432/employees?useSSL=false"
       ports:
       - name: be-http
         containerPort: 8080

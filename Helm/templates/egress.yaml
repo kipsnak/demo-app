@@ -1,0 +1,15 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.egress.name }}
+spec:
+  egress:
+  - to:
+    - ipBlock:
+        cidr: {{ .Values.egress.cidr }}
+    ports:
+    {{- range .Values.egress.ports }}
+    - protocol: TCP
+      port: {{ . }}
+    {{- end }}
