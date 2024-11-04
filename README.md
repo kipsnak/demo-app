@@ -74,8 +74,8 @@ Make sur libevirt daemon is up and running
 sudo systemctl status libvirtd
 ```
 Create a network
-```xml
-<!-- default.xml -->
+```bash
+cat <<EOF > default.xml
 <network>
   <name>default</name>
   <bridge name='virbr0'/>
@@ -86,6 +86,7 @@ Create a network
     </dhcp>
   </ip>
 </network>
+EOF
 ```
 ```bash
 sudo virsh net-define Kubernetes/network/default.xml
