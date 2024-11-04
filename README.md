@@ -448,13 +448,57 @@ see more info: https://github.com/facebook/create-react-app?tab=readme-ov-file#c
 
 _more details will come when i'm done debuging... sadge_
 
+### update
+
+Frot ends and client side languages are really not my cup of tea.
+
+I tried to start from scrach while inspiring from an already fully developped app, but customizing something I don't master in a short span of time is quite hard actually.
+
+So I took the already ready app and put it in as it is.
+
+Just added a `Dockerfile` to build it.
+
+Using multi-stage to reduce built image size.
+```bash
+cd <project root dir>/Frontend
+podman build -t demo-frontend:latest .
+```
+
+```bash
+podman run --rm -p 8080:80 testfront:latest
+```
+```
+/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+/docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+/docker-entrypoint.sh: Sourcing /docker-entrypoint.d/15-local-resolvers.envsh
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+/docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+/docker-entrypoint.sh: Configuration complete; ready for start up
+[ ... ]
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET / HTTP/1.1" 304 0 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET /static/css/2.af3c1da9.chunk.css HTTP/1.1" 304 0 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET /static/css/main.941a7d5c.chunk.css HTTP/1.1" 304 0 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET /static/js/2.adf17f9f.chunk.js HTTP/1.1" 304 0 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET /static/js/main.57c28490.chunk.js HTTP/1.1" 304 0 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+2024/11/04 19:12:56 [error] 28#28: *4 open() "/usr/share/nginx/html/api/v1/employees" failed (2: No such file or directory), client: 10.0.2.100, server: localhost, request: "GET /api/v1/employees HTTP/1.1", host: "localhost:8080", referrer: "http://localhost:8080/"
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET /api/v1/employees HTTP/1.1" 404 555 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+2024/11/04 19:12:56 [error] 29#29: *5 open() "/usr/share/nginx/html/manifest.json" failed (2: No such file or directory), client: 10.0.2.100, server: localhost, request: "GET /manifest.json HTTP/1.1", host: "localhost:8080", referrer: "http://localhost:8080/"
+10.0.2.100 - - [04/Nov/2024:19:12:56 +0000] "GET /manifest.json HTTP/1.1" 404 555 "http://localhost:8080/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" "-"
+```
+
 ## Helm
 
 Packaging these apps requires first pushing images to a registry. So let's push the backend to docker hub.
 
 start by generating a new token or use an old valide one.
 
+### Manually push image to docker hub
+
 ```bash
+# generate an access token on docker hub setting
 podman login -u kipsnak docker.io
 Password:
 Login Succeeded!
@@ -463,12 +507,29 @@ Login Succeeded!
 retag local built image
 ```bash
 podman tag localhost/demo-backend:latest docker.io/kipsnak/demo-backend:latest
+podman tag localhost/demo-frontend:latest docker.io/kipsnak/demo-frontend:latest
 ```
 
 push image to docker.io
 ```bash
 podman push docker.io/kipsnak/demo-backend:latest
+podman push docker.io/kipsnak/demo-frontend:latest
 ```
+
+### Automatically build and push image to docker hub
+
+TODO
+
+### Helm templating
+
+Let's check if the manifests are proprely generated
+```bash
+helm template . >  manifests.yaml
+```
+
+see `manifests.yaml` in the current repo
+
+### Deploy app with helm
 
 make sur we are connected to the cluster
 ```bash
@@ -479,37 +540,97 @@ node-2   Ready    <none>          5h58m   v1.29.10
 node-3   Ready    <none>          5h58m   v1.29.10
 ```
 
+Change directory to Helm package files
+```bash
+cd <project root dir>/Helm
+```
+
 install backend package
 ```bash
 helm install --name-template demo-app .
+```
+```
+NAME: demo-app
+LAST DEPLOYED: Mon Nov  4 20:20:42 2024
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
 ```
 
 check
 ```bash
 kubectl -n demo-app-ns get all
-NAME                                      READY   STATUS   RESTARTS     AGE
-pod/app-backend-deploy-79f76b6db5-tvwnr   0/1     Error    1 (8s ago)   13s
+```
+```
+NAME                                       READY   STATUS    RESTARTS     AGE
+pod/app-backend-deploy-79f76b6db5-xb8md    1/1     Running   1 (4s ago)   3m47s
+pod/app-frontend-deploy-7ccd9849df-g7h5n   1/1     Running   0            3m47s
 
-NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
-service/app-backend-svc   ClusterIP   10.100.205.250   <none>        8080/TCP   13s
+NAME                       TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/app-backend-svc    ClusterIP   10.101.42.34     <none>        8080/TCP   3m48s
+service/app-frontend-svc   ClusterIP   10.106.214.130   <none>        80/TCP     3m48s
 
-NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/app-backend-deploy   0/1     1            0           13s
+NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/app-backend-deploy    1/1     1            1           3m48s
+deployment.apps/app-frontend-deploy   1/1     1            1           3m48s
 
-NAME                                            DESIRED   CURRENT   READY   AGE
-replicaset.apps/app-backend-deploy-79f76b6db5   1         1         0       13s
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/app-backend-deploy-79f76b6db5    1         1         1       3m48s
+replicaset.apps/app-frontend-deploy-7ccd9849df   1         1         1       3m48s
 ```
 
 > [!warning]  
-> App shutdown with error; I need to fix network access to database from kubernetes cluster
+> I need to fix network access to database from kubernetes cluster
+
+```bash
+kubectl logs -n demo-app-ns pods/app-backend-deploy-79f76b6db5-xb8md --tail 30
+```
+at org.springframework.boot.loader.MainMethodRunner.run(MainMethodRunner.java:49) ~[runme.jar:0.0.1-SNAPSHOT]
+        at org.springframework.boot.loader.Launcher.launch(Launcher.java:95) ~[runme.jar:0.0.1-SNAPSHOT]
+        at org.springframework.boot.loader.Launcher.launch(Launcher.java:58) ~[runme.jar:0.0.1-SNAPSHOT]
+        at org.springframework.boot.loader.JarLauncher.main(JarLauncher.java:65) ~[runme.jar:0.0.1-SNAPSHOT]
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'dataSource' defined in class path resource [org/springframework/boot/autoconfigure/jdbc/DataSourceConfiguration$Hikari.class]: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception with message: URL must start with 'jdbc'
+        at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:657) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.ConstructorResolver.instantiateUsingFactoryMethod(ConstructorResolver.java:645) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.instantiateUsingFactoryMethod(AbstractAutowireCapableBeanFactory.java:1324) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBeanInstance(AbstractAutowireCapableBeanFactory.java:1161) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:561) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:521) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:326) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:324) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1405) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1325) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.ConstructorResolver.resolveAutowiredArgument(ConstructorResolver.java:885) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.ConstructorResolver.createArgumentArray(ConstructorResolver.java:789) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        ... 29 common frames omitted
+Caused by: org.springframework.beans.BeanInstantiationException: Failed to instantiate [com.zaxxer.hikari.HikariDataSource]: Factory method 'dataSource' threw exception with message: URL must start with 'jdbc'
+        at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:171) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        at org.springframework.beans.factory.support.ConstructorResolver.instantiate(ConstructorResolver.java:653) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        ... 43 common frames omitted
+Caused by: java.lang.IllegalArgumentException: URL must start with 'jdbc'
+        at org.springframework.util.Assert.isTrue(Assert.java:122) ~[spring-core-6.0.6.jar!/:6.0.6]
+        at org.springframework.boot.jdbc.DatabaseDriver.fromJdbcUrl(DatabaseDriver.java:282) ~[spring-boot-3.0.4.jar!/:3.0.4]
+        at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.determineDriverClassName(DataSourceProperties.java:180) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
+        at org.springframework.boot.autoconfigure.jdbc.DataSourceProperties.initializeDataSourceBuilder(DataSourceProperties.java:125) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
+        at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration.createDataSource(DataSourceConfiguration.java:48) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
+        at org.springframework.boot.autoconfigure.jdbc.DataSourceConfiguration$Hikari.dataSource(DataSourceConfiguration.java:90) ~[spring-boot-autoconfigure-3.0.4.jar!/:3.0.4]
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:na]
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:78) ~[na:na]
+        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:na]
+        at java.base/java.lang.reflect.Method.invoke(Method.java:568) ~[na:na]
+        at org.springframework.beans.factory.support.SimpleInstantiationStrategy.instantiate(SimpleInstantiationStrategy.java:139) ~[spring-beans-6.0.6.jar!/:6.0.6]
+        ... 44 common frames omitted
+```
 
 
 # TODO:
 
-* Fix frontend and make it compile
-* push frontend image to registry
+
 * fix network access to database (from k8s cluster -> local podman network)
-* activate frontend Helm values
 * finish writing the readme
 * automate cluster install completely
 * write CI/CD ?

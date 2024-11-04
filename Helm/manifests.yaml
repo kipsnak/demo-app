@@ -1,0 +1,177 @@
+---
+# Source: demo-app/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  name: demo-app-ns
+---
+# Source: demo-app/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: "app-backend-sa"
+  namespace: "demo-app-ns"
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app: app-backend
+---
+# Source: demo-app/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: "app-frontend-sa"
+  namespace: "demo-app-ns"
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app: app-frontend
+---
+# Source: demo-app/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: "app-backend-svc"
+  namespace: "demo-app-ns"
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app: app-backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: be-port
+      port: 8080
+      targetPort: be-http
+      protocol: TCP
+    
+  selector:
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app: app-backend
+---
+# Source: demo-app/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: "app-frontend-svc"
+  namespace: "demo-app-ns"
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app: app-frontend
+spec:
+  type: ClusterIP
+  ports:
+    - name: fe-port
+      port: 80
+      targetPort: fe-http
+      protocol: TCP
+    
+  selector:
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app: app-frontend
+---
+# Source: demo-app/templates/deployements.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app: app-backend
+  name: "app-backend-deploy"
+  namespace: "demo-app-ns"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-app
+      app.kubernetes.io/instance: release-name
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: demo-app-0.1.0
+        app.kubernetes.io/name: demo-app
+        app.kubernetes.io/instance: release-name
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: app-backend-sa
+      containers:
+        
+        - name: app-backend
+          image: "docker.io/kipsnak/demo-backend:latest"
+          imagePullPolicy: 
+          env:
+            - name: SPRING_POSTGRES_PASSWORD
+              value: M3P@ssw0rd!
+            - name: SPRING_POSTGRES_URL
+              value: tobeadded
+            - name: SPRING_POSTGRES_USERNAME
+              value: myapplication
+          ports:
+            - name: be-http
+              containerPort: 8080
+              protocol: TCP
+---
+# Source: demo-app/templates/deployements.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    helm.sh/chart: demo-app-0.1.0
+    app.kubernetes.io/name: demo-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+    app: app-frontend
+  name: "app-frontend-deploy"
+  namespace: "demo-app-ns"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-app
+      app.kubernetes.io/instance: release-name
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: demo-app-0.1.0
+        app.kubernetes.io/name: demo-app
+        app.kubernetes.io/instance: release-name
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: app-frontend-sa
+      containers:
+        
+        - name: app-frontend
+          image: "docker.io/kipsnak/demo-frontend:latest"
+          imagePullPolicy: 
+          ports:
+            - name: fe-http
+              containerPort: 80
+              protocol: TCP

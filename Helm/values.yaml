@@ -10,7 +10,7 @@ namesapce: &namespace demo-app-ns
 
 namespace:
   name: *namespace
-  create: false
+  create: true
 
 #
 # List of applications to deploy to cluster
@@ -20,6 +20,7 @@ applications:
 #
 # BACKEND
 #
+
 
 - application: backend
   labels:
@@ -31,6 +32,7 @@ applications:
   name: app-backend
   namespace: *namespace
 
+  # Deployment definition
   deploy:
     replicas: 1
     containers:
@@ -46,6 +48,8 @@ applications:
       ports:
       - name: be-http
         containerPort: 8080
+  
+  # Service definition
   service:
     type: ClusterIP  # just pick an IP from internal IP pool since ingress
     labels:
@@ -53,7 +57,7 @@ applications:
     ports:
       - name: be-port
         port: 8080
-        targetPort: be-http      
+        targetPort: be-http
 
 #
 # FRONTEND
@@ -67,25 +71,27 @@ applications:
   serviceAccount:
     create: true
 
-  name: app-backend
+  name: app-frontend
   namespace: *namespace
 
+  # Deployment definition
   deploy:
     replicas: 1
     containers:
     - name: app-frontend
       imagePullPolicy: IfNotPresent
-      repository: my-registry.io/my-application
-      image: front
-      tag: "1.0"
+      repository: docker.io/kipsnak
+      image: demo-frontend
+      tag: latest
       ports:
       - name: fe-http
         containerPort: 80
-        
+
+  # Service definition   
   service:
     type: ClusterIP  # just pick an IP from internal IP pool since ingress
     labels:
-      app: app-backend
+      app: app-frontend
     ports:
       - name: fe-port
         port: 80
