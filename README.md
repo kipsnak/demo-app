@@ -586,6 +586,7 @@ replicaset.apps/app-frontend-deploy-7ccd9849df   1         1         1       3m4
 ```bash
 kubectl logs -n demo-app-ns pods/app-backend-deploy-79f76b6db5-xb8md --tail 30
 ```
+```
 at org.springframework.boot.loader.MainMethodRunner.run(MainMethodRunner.java:49) ~[runme.jar:0.0.1-SNAPSHOT]
         at org.springframework.boot.loader.Launcher.launch(Launcher.java:95) ~[runme.jar:0.0.1-SNAPSHOT]
         at org.springframework.boot.loader.Launcher.launch(Launcher.java:58) ~[runme.jar:0.0.1-SNAPSHOT]
