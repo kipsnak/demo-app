@@ -60,33 +60,33 @@ applications:
 #
 
 #### Disabled while debuging frontend ####
-#- application: frontend
-#  labels:
-#    app: app-frontend
-#
-#  serviceAccount:
-#    create: true
-#
-#  name: app-backend
-#  namespace: *namespace
-#
-#  deploy:
-#    replicas: 1
-#    containers:
-#    - name: app-frontend
-#      imagePullPolicy: IfNotPresent
-#      repository: my-registry.io/my-application
-#      image: front
-#      tag: "1.0"
-#      ports:
-#      - name: fe-http
-#        containerPort: 80
-#        
-#  service:
-#    type: ClusterIP  # just pick an IP from internal IP pool since ingress
-#    labels:
-#      app: app-backend
-#    ports:
-#      - name: fe-port
-#        port: 80
-#        targetPort: fe-http
+- application: frontend
+  labels:
+    app: app-frontend
+
+  serviceAccount:
+    create: true
+
+  name: app-backend
+  namespace: *namespace
+
+  deploy:
+    replicas: 1
+    containers:
+    - name: app-frontend
+      imagePullPolicy: IfNotPresent
+      repository: my-registry.io/my-application
+      image: front
+      tag: "1.0"
+      ports:
+      - name: fe-http
+        containerPort: 80
+        
+  service:
+    type: ClusterIP  # just pick an IP from internal IP pool since ingress
+    labels:
+      app: app-backend
+    ports:
+      - name: fe-port
+        port: 80
+        targetPort: fe-http
