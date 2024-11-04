@@ -18,6 +18,7 @@ spec:
     metadata:
       labels:
         {{- include "myapp.labels" $ | nindent 8 }}
+        {{- .labels | toYaml | nindent 8 }}
     spec:
       serviceAccountName: {{ printf "%s-sa" .name | default "default-sa" }}
       containers:

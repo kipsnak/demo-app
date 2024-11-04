@@ -10,7 +10,7 @@ namesapce: &namespace demo-app-ns
 
 namespace:
   name: *namespace
-  create: true
+  create: false
 
 #
 # Create an egress to be able to connect to external podman database
@@ -20,6 +20,28 @@ egress:
   cidr: 10.88.0.2/32
   ports:
   - 5432
+
+#
+# Ingress controller to access application from external
+#
+ingress-nginx:
+  namespaceOverride: *namespace
+
+ingress:
+  name: demo-app-ingress
+  namespace: *namespace
+  ingressClassName: nginx
+  rules:
+  - host: mine.me
+    http:
+      paths:
+      - path: /.*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: app-frontend-svc
+            port:
+              number: 80
 
 #
 # List of applications to deploy to cluster

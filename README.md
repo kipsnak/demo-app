@@ -617,12 +617,173 @@ kubectl logs -n demo-app-ns pods/app-backend-deploy-75db86bc69-tptc9
 2024-11-04T21:44:59.582Z  INFO 1 --- [           main] n.j.s.SpringbootBackendApplication       : Started SpringbootBackendApplication in 4.1 seconds (process running for 4.597)
 ```
 
+## Ingress
 
+Add ingress as a Helm dependency
 
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm search repo -l ingress-nginx
+```
+```
+NAME                            CHART VERSION   APP VERSION     DESCRIPTION
+ingress-nginx/ingress-nginx     4.11.3          1.11.3          Ingress controller for Kubernetes using NGINX a...
+ingress-nginx/ingress-nginx     4.11.2          1.11.2          Ingress controller for Kubernetes using NGINX a...
+ingress-nginx/ingress-nginx     4.11.1          1.11.1          Ingress controller for Kubernetes using NGINX a...
+ingress-nginx/ingress-nginx     4.11.0          1.11.0          Ingress controller for Kubernetes using NGINX a...
+ingress-nginx/ingress-nginx     4.10.5          1.10.5          Ingress controller for Kubernetes using NGINX a...
+...
+```
+
+Add the following to helm chart file 
+```yaml
+# cat Chart.yaml
+dependencies:
+  - name: ingress-nginx
+    version: 4.11.3
+    repository: https://kubernetes.github.io/ingress-nginx
+```
+
+Then build the dependency
+```bash
+% helm dependency build
+```
+
+For this demo, i'll be using the same namespace as the app itself, so i'll override the default namespace
+```yaml
+ingress-nginx:
+  namespaceOverride: *namespace
+```
+
+At this point, we will deploy the ingress controller, but we still need a ingress. We will create one with helm
+```yaml
+# cat values.yaml
+ingress:
+  name: demo-app-ingress
+  namespace: *namespace
+  ingressClassName: nginx
+  rules:
+  - host: mine.me
+    http:
+      paths:
+      - path: /.*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: app-frontend-svc
+            port:
+              number: 80
+```
+```yaml
+#cat templates/ingress.yaml
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.ingress.name }}
+  namespace: {{ .Values.ingress.namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
+  rules:
+    {{- .Values.ingress.rules | toYaml | nindent 4 }}
+```
+
+> [!warning]
+> my ingressController get deployed before my namespace, so, I disabled it and created it manually
+>```yaml
+>namespace:
+>  name: *namespace
+>  create: false
+>```
+
+install the package with its ingress
+```bash
+kubectl create namespace demo-app-ns
+helm install --name-template demo-app
+```
+
+```bash
+kubectl -n demo-app-ns get all
+```
+```
+NAME                                                     READY   STATUS    RESTARTS   AGE
+pod/app-backend-deploy-b4b98f7b-44lwx                    1/1     Running   0          17m
+pod/app-frontend-deploy-5f7784fb58-chc7v                 1/1     Running   0          17m
+pod/demo-app-ingress-nginx-controller-856687c776-pw58j   1/1     Running   0          17m
+
+NAME                                                  TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+service/app-backend-svc                               ClusterIP      10.111.20.252   <none>        8080/TCP                     17m
+service/app-frontend-svc                              ClusterIP      10.106.50.251   <none>        80/TCP                       17m
+service/demo-app-ingress-nginx-controller             LoadBalancer   10.97.171.107   <pending>     80:31583/TCP,443:30490/TCP   17m
+service/demo-app-ingress-nginx-controller-admission   ClusterIP      10.105.81.185   <none>        443/TCP                      17m
+
+NAME                                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/app-backend-deploy                  1/1     1            1           17m
+deployment.apps/app-frontend-deploy                 1/1     1            1           17m
+deployment.apps/demo-app-ingress-nginx-controller   1/1     1            1           17m
+
+NAME                                                           DESIRED   CURRENT   READY   AGE
+replicaset.apps/app-backend-deploy-b4b98f7b                    1         1         1       17m
+replicaset.apps/app-frontend-deploy-5f7784fb58                 1         1         1       17m
+replicaset.apps/demo-app-ingress-nginx-controller-856687c776   1         1         1       17m
+```
+
+> [!warning]
+> since I don't have loadbalancer support yet we see `pending` in EXTERNAL-IP of `service/demo-app-ingress-nginx-controller` service 
+> but we can workaround it with port-formard for now
+>```bash
+> sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/kubectl
+> kubectl -n demo-app-ns port-forward svc/demo-app-ingress-nginx-controller 443 80
+>```
+
+Let's add the defined host in our `/etc/hosts`
+```
+127.0.0.1  mine.me
+```
+
+and we curl
+```bash
+curl --insecure -L https://mine.me 2>/dev/null | tidy
+```
+```
+Info: Document content looks like HTML5
+No warnings or errors were found.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="generator" content=
+"HTML Tidy for HTML5 for Linux version 5.6.0">
+<meta charset="utf-8">
+<link rel="icon" href="/favicon.ico">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="description" content=
+"Web site created using create-react-app">
+<link rel="apple-touch-icon" href="/logo192.png">
+<link rel="manifest" href="/manifest.json">
+<title>React App</title>
+<link href="/static/css/2.af3c1da9.chunk.css" rel="stylesheet">
+<link href="/static/css/main.941a7d5c.chunk.css" rel="stylesheet">
+</head>
+<body>
+<noscript>You need to enable JavaScript to run this app.</noscript>
+<div id="root"></div>
+<script>
+!function(e){function r(r){for(var n,f,l=r[0],a=r[1],i=r[2],p=0,s=[];p<l.length;p++)f=l[p],Object.prototype.hasOwnProperty.call(o,f)&&o[f]&&s.push(o[f][0]),o[f]=0;for(n in a)Object.prototype.hasOwnProperty.call(a,n)&&(e[n]=a[n]);for(c&&c(r);s.length;)s.shift()();return u.push.apply(u,i||[]),t()}function t(){for(var e,r=0;r<u.length;r++){for(var t=u[r],n=!0,l=1;l<t.length;l++){var a=t[l];0!==o[a]&&(n=!1)}n&&(u.splice(r--,1),e=f(f.s=t[0]))}return e}var n={},o={1:0},u=[];function f(r){if(n[r])return n[r].exports;var t=n[r]={i:r,l:!1,exports:{}};return e[r].call(t.exports,t,t.exports,f),t.l=!0,t.exports}f.m=e,f.c=n,f.d=function(e,r,t){f.o(e,r)||Object.defineProperty(e,r,{enumerable:!0,get:t})},f.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},f.t=function(e,r){if(1&r&&(e=f(e)),8&r)return e;if(4&r&&"object"==typeof e&&e&&e.__esModule)return e;var t=Object.create(null);if(f.r(t),Object.defineProperty(t,"default",{enumerable:!0,value:e}),2&r&&"string"!=typeof e)for(var n in e)f.d(t,n,function(r){return e[r]}.bind(null,n));return t},f.n=function(e){var r=e&&e.__esModule?function(){return e.default}:function(){return e};return f.d(r,"a",r),r},f.o=function(e,r){return Object.prototype.hasOwnProperty.call(e,r)},f.p="/";var l=this["webpackJsonpreact-frontend"]=this["webpackJsonpreact-frontend"]||[],a=l.push.bind(l);l.push=r,l=l.slice();for(var i=0;i<l.length;i++)r(l[i]);var c=a;t()}([])
+</script>
+<script src="/static/js/2.adf17f9f.chunk.js"></script>
+<script src="/static/js/main.57c28490.chunk.js"></script>
+</body>
+</html>
+```
 
 # TODO:
 
-* add ingress nginx
 * finish writing the readme
 * automate cluster install completely
 * write CI/CD ?
