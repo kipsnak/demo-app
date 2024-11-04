@@ -73,6 +73,40 @@ Make sur libevirt daemon is up and running
 ```bash
 sudo systemctl status libvirtd
 ```
+Create a network
+```xml
+<!-- default.xml -->
+<network>
+  <name>default</name>
+  <bridge name='virbr0'/>
+  <forward/>
+  <ip address='192.168.122.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.122.2' end='192.168.122.254'/>
+    </dhcp>
+  </ip>
+</network>
+```
+```bash
+sudo virsh net-define Kubernetes/network/default.xml
+```
+```bash
+sudo virsh net-start default
+```
+
+Somehow, after a day and pc hebernation, could not associate the bridge on the host with my libvirt network
+```
+error: Failed to start network default
+error: internal error: Network is already in use by interface virbr0
+```
+
+To fix this
+```bash
+# needs bridge-utils
+# sudo apt install bridge-utils
+sudo ip link set virbr0 down
+sudo brctl delbr virbr0
+```
 
 check the default network is active
 ```bash
@@ -85,6 +119,7 @@ sudo virsh net-list
 if not, run
 ```bash
 sudo virsh net-start default
+sudo virsh net-autostart default
 ```
 
 Using `butane` file, generate the ignition file
@@ -94,7 +129,7 @@ podman run --interactive --rm quay.io/coreos/butane:release --pretty --strict < 
 
 We have now our ignition file for the cluster, let's create the first node which will play the role of the control plane
 ```bash
-export IMAGE="$(pwd)/image/fedora-coreos-40.20241019.3.0-qemu.x86_64.qcow2" # Put the downloaded version above
+export IMAGE="$(pwd)/images/fedora-coreos-40.20241019.3.0-qemu.x86_64.qcow2" # Put the downloaded version above
 export IGN_FILE="$(pwd)/fcos.ign"
 
 sudo ./start_node --node 1 --image ${IMAGE} -f ${IGN_FILE}
@@ -105,7 +140,7 @@ hit `ctrl + ]` to exit.
 check node ip
 ```bash
 sudo virsh domifaddr node-1 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
-192.168.122.79
+192.168.122.222
 ```
 
 connect with ssh to the first node
@@ -127,22 +162,30 @@ systemctl reboot
 
 Then, create the second node
 ```bash
+export IMAGE="$(pwd)/images/fedora-coreos-40.20241019.3.0-qemu.x86_64.qcow2" # Put the downloaded version above
+export IGN_FILE="$(pwd)/fcos.ign"
 sudo ./start_node --node 2 --image ${IMAGE} -f ${IGN_FILE}
 # ctrl + ] to exit
+sudo virsh domifaddr node-2 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
+# 192.168.122.248
+ssh -i .ssh/id_rsa core@$(sudo virsh domifaddr node-2 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
 sudo -i
 echo "node-2" > /etc/hostname
+rpm-ostree install kubelet kubeadm cri-o
+systemctl reboot
 ```
 
-and third
+and finally the third node
 ```bash
+export IMAGE="$(pwd)/images/fedora-coreos-40.20241019.3.0-qemu.x86_64.qcow2" # Put the downloaded version above
+export IGN_FILE="$(pwd)/fcos.ign"
 sudo ./start_node --node 3 --image ${IMAGE} -f ${IGN_FILE}
 # ctrl + ] to exit
+sudo virsh domifaddr node-3 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
+# 192.168.122.27
+ssh -i .ssh/id_rsa core@$(sudo virsh domifaddr node-3 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
 sudo -i
 echo "node-3" > /etc/hostname
-```
-
-Then for both
-```bash
 rpm-ostree install kubelet kubeadm cri-o
 systemctl reboot
 ```
@@ -182,21 +225,71 @@ EOF
 
 Initiate the cluster
 ```bash
-kubeadm init ––config clusterconfig.yml
+kubeadm init --config clusterconfig.yml
 ```
 
 Be careful, the `kubeadm init` will print the command line with a generated discovery token that allow workers to join the cluster.
+```
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.122.222:6443 --token q7lnnh.4l3otpb53usf6urx \
+        --discovery-token-ca-cert-hash sha256:32b04078d12e4accd27b7a96ae966dc87312b51e8a2d4eac174ee0e805f98e0a
+```
+
+configure kubectl kbe config
+```bash
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+```
 
 Set up the kube-router
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/cloudnativelabs/kube-router/master/daemonset/kubeadm-kuberouter.yaml
 ```
+```
+configmap/kube-router-cfg created
+daemonset.apps/kube-router created
+serviceaccount/kube-router created
+clusterrole.rbac.authorization.k8s.io/kube-router created
+clusterrolebinding.rbac.authorization.k8s.io/kube-router created
+```
 
 Then use the token to let node-2 and node-3 join the cluster
 ```bash
-sudo -i
-kubeadm join 192.168.122.79:6443 --token jfy1ea.v2qunivd3u2t2jep \
-        --discovery-token-ca-cert-hash sha256:a1e7f2fa7e1de3d31a9152864c5621128a0a36d2c7def0c6d2bdbac2aeeb3f48
+sudo kubeadm join 192.168.122.222:6443 --token q7lnnh.4l3otpb53usf6urx \
+        --discovery-token-ca-cert-hash sha256:32b04078d12e4accd27b7a96ae966dc87312b51e8a2d4eac174ee0e805f98e0a
+```
+```
+[preflight] Running pre-flight checks
+[preflight] Reading configuration from the cluster...
+[preflight] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Starting the kubelet
+[kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap...
+
+This node has joined the cluster:
+* Certificate signing request was sent to apiserver and a response was received.
+* The Kubelet was informed of the new secure connection details.
+
+Run 'kubectl get nodes' on the control-plane to see this node join the cluster.
 ```
 
 check
@@ -208,6 +301,24 @@ NAME     STATUS   ROLES           AGE     VERSION
 node-1   Ready    control-plane   10m     v1.29.10
 node-2   Ready    <none>          4m30s   v1.29.10
 node-3   Ready    <none>          4m18s   v1.29.10
+
+```bash
+core@node-1:~$ kubectl get namespaces -A
+```
+```
+NAME              STATUS   AGE
+default           Active   11m
+kube-node-lease   Active   11m
+kube-public       Active   11m
+kube-system       Active   11m
+```
+
+To use helm on the local host, we need to get the kubeconfig from our control plane
+
+```bash
+# if you have an existing kubeconfig back it up
+# cp -a ~/.kube/config{,#back}
+ssh -i .ssh/id_rsa core@$(sudo virsh domifaddr node-1 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b") "cat .kube/config" > ~/.kube/config
 ```
 
 ## Database
