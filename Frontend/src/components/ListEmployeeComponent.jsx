@@ -29,7 +29,6 @@ class ListEmployeeComponent extends Component {
         EmployeeService.getEmployees().then((res) => {
             this.setState({ employees: res.data});
         });
-        console.log(this.state);
     }
 
     addEmployee(){

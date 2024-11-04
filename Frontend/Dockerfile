@@ -4,6 +4,8 @@
 FROM docker.io/node:lts-alpine AS builder
 LABEL stage="builder"
 
+ENV NODE_OPTIONS=--openssl-legacy-provider
+
 # prepare workdir
 RUN mkdir -p /app
 WORKDIR /app

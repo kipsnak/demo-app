@@ -1,4 +1,4 @@
-name: Build the backend Docker image
+name: Build demo app docker images
 
 on:
   push:
@@ -16,3 +16,9 @@ jobs:
         push: false
         context: "{{defaultContext}}:Backend"
         tags: kipsnak/demo-backend:latest
+    - name: Build without push the rfont Docker image
+      uses: docker/build-push-action@v6
+      with:
+        push: false
+        context: "{{defaultContext}}:Frontend"
+        tags: kipsnak/demo-frontend:latest
