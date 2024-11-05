@@ -795,7 +795,7 @@ No warnings or errors were found.
 
 # TODO:
 
-* add apps creator credit properly @havaguides at https://www.javaguides.net/ /!\ 
+* add apps creator credit properly @javaguides at https://www.javaguides.net/ /!\ 
 * finish writing the readme
 * automate cluster install completely
 * write CI/CD ?
