@@ -667,13 +667,20 @@ ingress:
   - host: mine.me
     http:
       paths:
-      - path: /.*
-        pathType: ImplementationSpecific
+      - path: /(.*)
+        pathType: Prefix
         backend:
           service:
             name: app-frontend-svc
             port:
               number: 80
+      - path: /api/v1/(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: app-backend-svc
+            port:
+              number: 8080
 ```
 ```yaml
 #cat templates/ingress.yaml
@@ -781,6 +788,8 @@ No warnings or errors were found.
 </body>
 </html>
 ```
+
+
 
 # TODO:
 
