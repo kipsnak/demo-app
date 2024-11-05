@@ -795,6 +795,7 @@ No warnings or errors were found.
 
 # TODO:
 
+* add apps creator credit properly /!\ 
 * finish writing the readme
 * automate cluster install completely
 * write CI/CD ?
