@@ -790,6 +790,8 @@ No warnings or errors were found.
 ```
 
 
+![alt text](https://github.com/kipsnak/demo-app/blob/main/demo.gif)
+
 
 # TODO:
 
